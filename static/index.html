@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Imobiliária</title>
+
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; background: #f2f4f7; color: #222; }
+  header { background: #1f3a5f; color: white; padding: 16px 24px; }
+  main { max-width: 900px; margin: 20px auto; padding: 0 16px; }
+  .abas button { padding: 10px 20px; border: none; cursor: pointer; background: #d9dee5; font-size: 15px; }
+  .abas button.ativa { background: #1f3a5f; color: white; }
+  .caixa { background: white; padding: 16px; margin-top: 12px; border-radius: 6px; }
+  input, select { padding: 8px; margin: 4px 4px 4px 0; border: 1px solid #bbb; border-radius: 4px; }
+  .botao { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; color: white; background: #2e7d32; }
+  .editar { background: #f9a825; }
+  .excluir { background: #c62828; }
+  .cancelar { background: #777; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e3e3e3; }
+  th { background: #eef1f5; }
+  .oculto { display: none; }
+</style>
+</head>
+<body>
+
+<header><h1>Sistema da Imobiliária</h1></header>
+
+<main>
+  <div class="abas">
+    <button id="aba-clientes" class="ativa" onclick="mostrarAba('clientes')">Clientes</button>
+    <button id="aba-imoveis" onclick="mostrarAba('imoveis')">Imóveis</button>
+  </div>
+
+  
+  <section id="secao-clientes">
+    <div class="caixa">
+      <h3 id="titulo-cliente">Novo cliente</h3>
+      <input type="hidden" id="cliente-id">
+      <input id="cliente-nome" placeholder="Nome">
+      <input id="cliente-cpf" placeholder="CPF">
+      <input id="cliente-telefone" placeholder="Telefone">
+      <input id="cliente-email" placeholder="E-mail">
+      <br>
+      <button class="botao" onclick="salvarCliente()">Salvar</button>
+      <button class="botao cancelar" onclick="limparCliente()">Cancelar</button>
+    </div>
+    <div class="caixa">
+      <h3>Lista de clientes</h3>
+      <table>
+        <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead>
+        <tbody id="tabela-clientes"></tbody>
+      </table>
+    </div>
+  </section>
+
+  
+  <section id="secao-imoveis" class="oculto">
+    <div class="caixa">
+      <h3 id="titulo-imovel">Novo imóvel</h3>
+      <input type="hidden" id="imovel-id">
+      <select id="imovel-tipo">
+        <option>Casa</option>
+        <option>Apartamento</option>
+        <option>Terreno</option>
+        <option>Sala comercial</option>
+      </select>
+      <input id="imovel-endereco" placeholder="Endereço">
+      <input id="imovel-valor" type="number" placeholder="Valor (R$)">
+      <input id="imovel-quartos" type="number" placeholder="Quartos">
+      <select id="imovel-status">
+        <option>Disponível</option>
+        <option>Vendido</option>
+        <option>Alugado</option>
+      </select>
+      <br>
+      <button class="botao" onclick="salvarImovel()">Salvar</button>
+      <button class="botao cancelar" onclick="limparImovel()">Cancelar</button>
+    </div>
+    <div class="caixa">
+      <h3>Lista de imóveis</h3>
+      <table>
+        <thead><tr><th>Tipo</th><th>Endereço</th><th>Valor</th><th>Quartos</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="tabela-imoveis"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+  
+  function mostrarAba(nome) {
+    document.getElementById("secao-clientes").classList.toggle("oculto", nome !== "clientes");
+    document.getElementById("secao-imoveis").classList.toggle("oculto", nome !== "imoveis");
+    document.getElementById("aba-clientes").classList.toggle("ativa", nome === "clientes");
+    document.getElementById("aba-imoveis").classList.toggle("ativa", nome === "imoveis");
+  }
+
+  
+  async function chamarApi(url, metodo, dados) {
+    const opcoes = { method: metodo, headers: { "Content-Type": "application/json" } };
+    if (dados) opcoes.body = JSON.stringify(dados);
+    const resposta = await fetch(url, opcoes);
+    const json = await resposta.json();
+    if (!resposta.ok) { alert(json.erro); return null; }
+    return json;
+  }
+
+  
+  let listaClientes = [];
+
+  async function carregarClientes() {
+    listaClientes = await (await fetch("/api/clientes")).json();
+    const tabela = document.getElementById("tabela-clientes");
+    tabela.innerHTML = "";
+    listaClientes.forEach(c => {
+      tabela.innerHTML += `
+        <tr>
+          <td>${c.nome}</td><td>${c.cpf}</td><td>${c.telefone || ""}</td><td>${c.email || ""}</td>
+          <td>
+            <button class="botao editar" onclick="editarCliente(${c.id})">Editar</button>
+            <button class="botao excluir" onclick="excluirCliente(${c.id})">Excluir</button>
+          </td>
+        </tr>`;
+    });
+  }
+
+  async function salvarCliente() {
+    const id = document.getElementById("cliente-id").value;
+    const dados = {
+      nome: document.getElementById("cliente-nome").value,
+      cpf: document.getElementById("cliente-cpf").value,
+      telefone: document.getElementById("cliente-telefone").value,
+      email: document.getElementById("cliente-email").value
+    };
+    const resultado = id
+      ? await chamarApi("/api/clientes/" + id, "PUT", dados)   
+      : await chamarApi("/api/clientes", "POST", dados);       
+    if (resultado) { limparCliente(); carregarClientes(); }
+  }
+
+  function editarCliente(id) {
+    const c = listaClientes.find(x => x.id === id);
+    document.getElementById("cliente-id").value = c.id;
+    document.getElementById("cliente-nome").value = c.nome;
+    document.getElementById("cliente-cpf").value = c.cpf;
+    document.getElementById("cliente-telefone").value = c.telefone || "";
+    document.getElementById("cliente-email").value = c.email || "";
+    document.getElementById("titulo-cliente").innerText = "Modificar cliente";
+  }
+
+  async function excluirCliente(id) {
+    if (!confirm("Deseja excluir este cliente?")) return;
+    await chamarApi("/api/clientes/" + id, "DELETE");
+    carregarClientes();
+  }
+
+  function limparCliente() {
+    ["id", "nome", "cpf", "telefone", "email"].forEach(campo =>
+      document.getElementById("cliente-" + campo).value = "");
+    document.getElementById("titulo-cliente").innerText = "Novo cliente";
+  }
+
+  let listaImoveis = [];
+
+  async function carregarImoveis() {
+    listaImoveis = await (await fetch("/api/imoveis")).json();
+    const tabela = document.getElementById("tabela-imoveis");
+    tabela.innerHTML = "";
+    listaImoveis.forEach(i => {
+      tabela.innerHTML += `
+        <tr>
+          <td>${i.tipo}</td><td>${i.endereco}</td>
+          <td>R$ ${i.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+          <td>${i.quartos}</td><td>${i.status}</td>
+          <td>
+            <button class="botao editar" onclick="editarImovel(${i.id})">Editar</button>
+            <button class="botao excluir" onclick="excluirImovel(${i.id})">Excluir</button>
+          </td>
+        </tr>`;
+    });
+  }
+
+  async function salvarImovel() {
+    const id = document.getElementById("imovel-id").value;
+    const dados = {
+      tipo: document.getElementById("imovel-tipo").value,
+      endereco: document.getElementById("imovel-endereco").value,
+      valor: document.getElementById("imovel-valor").value,
+      quartos: document.getElementById("imovel-quartos").value,
+      status: document.getElementById("imovel-status").value
+    };
+    const resultado = id
+      ? await chamarApi("/api/imoveis/" + id, "PUT", dados)    
+      : await chamarApi("/api/imoveis", "POST", dados);
+    if (resultado) { limparImovel(); carregarImoveis(); }
+  }
+
+  function editarImovel(id) {
+    const i = listaImoveis.find(x => x.id === id);
+    document.getElementById("imovel-id").value = i.id;
+    document.getElementById("imovel-tipo").value = i.tipo;
+    document.getElementById("imovel-endereco").value = i.endereco;
+    document.getElementById("imovel-valor").value = i.valor;
+    document.getElementById("imovel-quartos").value = i.quartos;
+    document.getElementById("imovel-status").value = i.status;
+    document.getElementById("titulo-imovel").innerText = "Modificar imóvel";
+  }
+
+  async function excluirImovel(id) {
+    if (!confirm("Deseja excluir este imóvel?")) return;
+    await chamarApi("/api/imoveis/" + id, "DELETE");
+    carregarImoveis();
+  }
+
+  function limparImovel() {
+    ["id", "endereco", "valor", "quartos"].forEach(campo =>
+      document.getElementById("imovel-" + campo).value = "");
+    document.getElementById("imovel-tipo").selectedIndex = 0;
+    document.getElementById("imovel-status").selectedIndex = 0;
+    document.getElementById("titulo-imovel").innerText = "Novo imóvel";
+  }
+
+  carregarClientes();
+  carregarImoveis();
+</script>
+</body>
+</html>
