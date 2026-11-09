@@ -40,9 +40,15 @@ def criar_tabelas():
 
 
 
-def listar_clientes():
+def listar_clientes(busca=""):
+    termo = "%" + busca + "%"
     conexao = conectar()
-    linhas = conexao.execute("SELECT * FROM clientes ORDER BY nome").fetchall()
+    linhas = conexao.execute(
+        """SELECT * FROM clientes
+           WHERE nome LIKE ? OR cpf LIKE ? OR telefone LIKE ? OR email LIKE ?
+           ORDER BY nome""",
+        (termo, termo, termo, termo),
+    ).fetchall()
     conexao.close()
     return [dict(linha) for linha in linhas]
 
@@ -75,9 +81,17 @@ def excluir_cliente(id):
 
 
 
-def listar_imoveis():
+def listar_imoveis(busca="", tipo="", status=""):
+    termo = "%" + busca + "%"
     conexao = conectar()
-    linhas = conexao.execute("SELECT * FROM imoveis ORDER BY id DESC").fetchall()
+    linhas = conexao.execute(
+        """SELECT * FROM imoveis
+           WHERE endereco LIKE ?
+             AND (? = '' OR tipo = ?)
+             AND (? = '' OR status = ?)
+           ORDER BY id DESC""",
+        (termo, tipo, tipo, status, status),
+    ).fetchall()
     conexao.close()
     return [dict(linha) for linha in linhas]
 

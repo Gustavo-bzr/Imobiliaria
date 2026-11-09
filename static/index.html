@@ -21,6 +21,8 @@
   th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e3e3e3; }
   th { background: #eef1f5; }
   .oculto { display: none; }
+  .busca { width: 260px; }
+  .vazio { text-align: center; color: #777; }
 </style>
 </head>
 <body>
@@ -48,6 +50,9 @@
     </div>
     <div class="caixa">
       <h3>Lista de clientes</h3>
+      <input id="busca-clientes" class="busca" placeholder="Buscar por nome, CPF, telefone ou e-mail"
+             oninput="carregarClientes()">
+      <button class="botao cancelar" onclick="limparBuscaClientes()">Limpar</button>
       <table>
         <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead>
         <tbody id="tabela-clientes"></tbody>
@@ -80,6 +85,21 @@
     </div>
     <div class="caixa">
       <h3>Lista de imóveis</h3>
+      <input id="busca-imoveis" class="busca" placeholder="Buscar por endereço" oninput="carregarImoveis()">
+      <select id="filtro-tipo" onchange="carregarImoveis()">
+        <option value="">Todos os tipos</option>
+        <option>Casa</option>
+        <option>Apartamento</option>
+        <option>Terreno</option>
+        <option>Sala comercial</option>
+      </select>
+      <select id="filtro-status" onchange="carregarImoveis()">
+        <option value="">Todos os status</option>
+        <option>Disponível</option>
+        <option>Vendido</option>
+        <option>Alugado</option>
+      </select>
+      <button class="botao cancelar" onclick="limparBuscaImoveis()">Limpar</button>
       <table>
         <thead><tr><th>Tipo</th><th>Endereço</th><th>Valor</th><th>Quartos</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody id="tabela-imoveis"></tbody>
@@ -111,9 +131,13 @@
   let listaClientes = [];
 
   async function carregarClientes() {
-    listaClientes = await (await fetch("/api/clientes")).json();
+    const busca = document.getElementById("busca-clientes").value;
+    listaClientes = await (await fetch("/api/clientes?busca=" + encodeURIComponent(busca))).json();
     const tabela = document.getElementById("tabela-clientes");
     tabela.innerHTML = "";
+    if (listaClientes.length === 0) {
+      tabela.innerHTML = '<tr><td colspan="5" class="vazio">Nenhum cliente encontrado.</td></tr>';
+    }
     listaClientes.forEach(c => {
       tabela.innerHTML += `
         <tr>
@@ -165,9 +189,17 @@
   let listaImoveis = [];
 
   async function carregarImoveis() {
-    listaImoveis = await (await fetch("/api/imoveis")).json();
+    const params = new URLSearchParams({
+      busca: document.getElementById("busca-imoveis").value,
+      tipo: document.getElementById("filtro-tipo").value,
+      status: document.getElementById("filtro-status").value
+    });
+    listaImoveis = await (await fetch("/api/imoveis?" + params)).json();
     const tabela = document.getElementById("tabela-imoveis");
     tabela.innerHTML = "";
+    if (listaImoveis.length === 0) {
+      tabela.innerHTML = '<tr><td colspan="6" class="vazio">Nenhum imóvel encontrado.</td></tr>';
+    }
     listaImoveis.forEach(i => {
       tabela.innerHTML += `
         <tr>
@@ -220,6 +252,18 @@
     document.getElementById("imovel-tipo").selectedIndex = 0;
     document.getElementById("imovel-status").selectedIndex = 0;
     document.getElementById("titulo-imovel").innerText = "Novo imóvel";
+  }
+
+  function limparBuscaClientes() {
+    document.getElementById("busca-clientes").value = "";
+    carregarClientes();
+  }
+
+  function limparBuscaImoveis() {
+    document.getElementById("busca-imoveis").value = "";
+    document.getElementById("filtro-tipo").selectedIndex = 0;
+    document.getElementById("filtro-status").selectedIndex = 0;
+    carregarImoveis();
   }
 
   carregarClientes();

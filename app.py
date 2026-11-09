@@ -15,7 +15,8 @@ def pagina_inicial():
 
 @app.route("/api/clientes", methods=["GET"])
 def listar_clientes():
-    return jsonify(banco.listar_clientes())
+    busca = request.args.get("busca", "")
+    return jsonify(banco.listar_clientes(busca))
 
 
 @app.route("/api/clientes", methods=["POST"])
@@ -45,7 +46,10 @@ def excluir_cliente(id):
 
 @app.route("/api/imoveis", methods=["GET"])
 def listar_imoveis():
-    return jsonify(banco.listar_imoveis())
+    busca = request.args.get("busca", "")
+    tipo = request.args.get("tipo", "")
+    status = request.args.get("status", "")
+    return jsonify(banco.listar_imoveis(busca, tipo, status))
 
 
 @app.route("/api/imoveis", methods=["POST"])
